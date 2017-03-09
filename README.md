@@ -12,4 +12,7 @@ facebook.js 為vtaiwan粉絲頁新聞自動上稿至vtaiwan discourse news
     4.compare.js 1.比對陣列內是否有相同資料  2.按照年分排序 存成filter.json檔案
     5.post_merrg 將排序好的filter.json檔案上稿到vtaiwan discourse news
 
+合併；vtaiwan.org重要觀測
+
+    1.get_vtaiwan_org_Around_the_clobe.js抓取vtaiwan.org網站內的所有重要觀測存入vtaiwan discourse Around the Globe
     
