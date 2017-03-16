@@ -3,6 +3,7 @@
 執行 node facebook.js
 
 facebook.js 為vtaiwan粉絲頁新聞自動上稿至vtaiwan discourse news
+FB_news_globe.js 為vtaiwan粉絲頁新聞以及新聞觀測自動上稿至vtaiwan discourse new & around the globe
 
 合併；vtaiwan.org新聞資訊 與 vtaiwanFB粉絲頁新聞資訊 
 
