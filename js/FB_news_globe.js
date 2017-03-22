@@ -21,11 +21,11 @@ async function main() {
   //*************FACEBOOK [新聞觀測]爬蟲程式**********/
   var DiscourseGlobe = await GetData(GetDiscourseOptions('around-the-globe',facebookglobetopic));            //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicid)
   var timestampGlobe = await Timestamp(DiscourseGlobe);                          //最一筆po文時間轉為timestamp
-  var FacebookOptionsGlobe = await GetFacebookOptions(timestampGlobe + 1);        //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
+  // var FacebookOptionsGlobe = await GetFacebookAroundOptions(1489881600);
+  var FacebookOptionsGlobe = await GetFacebookAroundOptions(timestampGlobe + 1);        //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
   var FacebookGlobe = await GetData(FacebookOptionsGlobe);                       //抓取Facebook粉絲頁最新PO文[新聞觀測]
   var AnalyFacebookGlobe = await AnalysisFacebookGlobe(FacebookGlobe)         //將抓取到的資料做分析處理
-  var postGlob = await PostData(AnalyFacebookNews, PostDiscourseOptions, facebookglobetopic)   //寫回discourse news -函數設定(data,option,topicid)
-  
+  var postGlob = await PostData(AnalyFacebookGlobe, PostDiscourseOptions, facebookglobetopic)   //寫回discourse news -函數設定(data,option,topicid)  
 }
 
 //**************抓取資料:使用不同option************************ */
@@ -44,13 +44,14 @@ async function GetData(option) {
 }
 //**************日期轉換timestamp************************ */
 async function Timestamp(data) {
+  
   var lastdata=data.post_stream.posts[data.post_stream.posts.length - 1].cooked;
   if(data.post_stream.posts[0].topic_id==1249){
     var lasttime = lastdata.replace(/(\W(.*))+建立時間:<br>/, "").replace(/[+].*(\W(.*))+/, "");
   }
   else if(data.post_stream.posts[0].topic_id==1258){
     var lasttime = lastdata.indexOf("發佈日期");
-    lasttime = lastdata.substr(lasttime,27).replace(/發佈日期:/g,"").replace(/[+].*/,"");
+    lasttime = lastdata.substr(lasttime,27).replace(/發佈日期:/g,"").replace(/<.*/,"");
   }
   return new Date(lasttime).getTime() / 1000;
 }
@@ -77,23 +78,38 @@ async function AnalysisFacebookNews(jsonfile) {
 async function AnalysisFacebookGlobe(jsonfile) {
   var counter = '';
   var fbinfo = [];
+  var table='';
   counter = 0;
-  for (var i = 0; i < jsonfile.data.length; i++) {
-    if (jsonfile.data[(jsonfile.data.length - i) - 1].message != undefined && jsonfile.data[(jsonfile.data.length - i) - 1].message.indexOf('【新聞觀測】') == 0) {
-        fbinfo[counter] = "title:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].name + "<br>";
-        fbinfo[counter] += "table:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].description + "<br>";
-        fbinfo[counter] += "新聞圖片:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].full_picture + "<br>";
-        fbinfo[counter] += "發佈日期:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].created_time + "<br>";
-        fbinfo[counter] += "content:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].caption + "<br>";
-        counter++;
+  if(jsonfile.data!=undefined){
+    for (var i = 0; i < jsonfile.data.length; i++) {
+      if(jsonfile.data[(jsonfile.data.length - i) - 1].attachments.data[0].description!=undefined){
+        var length = (jsonfile.data.length - i) - 1;
+        var data = jsonfile.data[length].attachments.data[0];
+        if(data.description.indexOf('【國際觀測】')>-1){
+          fbinfo[counter] = "title:<br>" + data.title+ "<br>";
+          table = data.description.substr(data.description.indexOf("類別:")).replace(/\n.*/g,"")+ "<br>";
+          data.description=data.description.replace(/類別:.*(\n)+/,"")
+          table += data.description.substr(data.description.indexOf("區域:")).replace(/\n.*/g,"")+ "<br>";
+          data.description=data.description.replace(/區域:.*(\n)+/,"")
+          table += data.description.substr(data.description.indexOf("年度:")).replace(/\n.*/g,"")+ "<br>";
+          data.description=data.description.replace(/年度:.*(\n)+/,"")
+          table += "作者:<br>" +data.description.substr(data.description.indexOf("作者:")).replace(/\n.*/g,"").replace(/作者:/g,"")+ "<br>";
+          data.description=data.description.replace(/作者:.*(\n)+/,"")
+          fbinfo[counter] += "table:<br>" + table;
+          fbinfo[counter] += "發佈日期:" +jsonfile.data[length].created_time.replace(/[+].*/,"")+ "<br>";
+          fbinfo[counter] += "content:<br>" +data.description.replace(/【國際觀測】/,"")+ "<br>";
+          counter++;
+        }
       }
+    }
   }
   return fbinfo;
 }
 //**************將資料寫入到discourse************************ */
 async function PostData(data, option, topicid) {
   if (data.length > 0) {
-    console.log("\r\n***一共需上傳" + data.length + "篇***\r\n")
+    if(topicid==1249){console.log("\r\n***[新聞快遞]一共需上傳" + data.length + "篇***\r\n")}
+    if(topicid==1258){console.log("\r\n***[國際觀測]一共需上傳" + data.length + "篇***\r\n")}
     var coun = 0;
     for (let i of data) {
       coun++;
@@ -103,7 +119,9 @@ async function PostData(data, option, topicid) {
     console.log("\r\n***上傳完成***\r\n")
   }
   else {
-    console.log("\r\n***目前已更至最新***\r\n")
+    if(topicid==1249){console.log("\r\n***[新聞快遞] 目前已更至最新***\r\n")}
+    if(topicid==1258){console.log("\r\n***[國際觀測] 目前已更至最新***\r\n")}
+    
   }
 }
 async function PostDatatoDiscourse(data, option, topicid) {
@@ -150,6 +168,14 @@ function GetDiscourseOptions(topicname,topicid) {
 //*****************Facebook get 設定*************
 async function GetFacebookOptions(timestamp) {
   var timepath = config.fbkey + '&since=' + timestamp;
+  var getfboptions = {
+    host: 'graph.facebook.com',
+    path: timepath,
+  };
+  return getfboptions;
+}
+async function GetFacebookAroundOptions(timestamp) {
+  var timepath = config.fbaroundkey + '&since=' + timestamp;
   var getfboptions = {
     host: 'graph.facebook.com',
     path: timepath,
