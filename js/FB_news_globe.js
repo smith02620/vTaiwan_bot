@@ -26,6 +26,7 @@ async function main() {
   var FacebookGlobe = await GetData(FacebookOptionsGlobe);                       //抓取Facebook粉絲頁最新PO文[新聞觀測]
   var AnalyFacebookGlobe = await AnalysisFacebookGlobe(FacebookGlobe)         //將抓取到的資料做分析處理
   var postGlob = await PostData(AnalyFacebookGlobe, PostDiscourseOptions, facebookglobetopic)   //寫回discourse news -函數設定(data,option,topicid)  
+  
 }
 
 //**************抓取資料:使用不同option************************ */
@@ -93,8 +94,12 @@ async function AnalysisFacebookGlobe(jsonfile) {
           data.description=data.description.replace(/區域:.*(\n)+/,"")
           table += data.description.substr(data.description.indexOf("年度:")).replace(/\n.*/g,"")+ "<br>";
           data.description=data.description.replace(/年度:.*(\n)+/,"")
-          table += "作者:<br>" +data.description.substr(data.description.indexOf("作者:")).replace(/\n.*/g,"").replace(/作者:/g,"")+ "<br>";
-          data.description=data.description.replace(/作者:.*(\n)+/,"")
+          table += data.description.substr(data.description.indexOf("作者:")).replace(/\n.*/g,"")+ "<br>";
+          data.description=data.description.replace(/作者:.*(\n)+/,"");
+          var table1 = data.description.substr(data.description.indexOf("組織機構和網址：")).replace(/\n.*/g,"").replace(/組織機構和網址：/g,"")+ "\n<br>";
+          table1=table1.split('http');
+          table +="組織機構名稱與網址："+table1[0]+"\n\nhttp"+table1[1];
+          data.description=data.description.replace(/組織機構和網址：.*(\n)+/,"");
           fbinfo[counter] += "table:<br>" + table;
           fbinfo[counter] += "發佈日期:" +jsonfile.data[length].created_time.replace(/[+].*/,"")+ "<br>";
           fbinfo[counter] += "content:<br>" +data.description.replace(/【國際觀測】/,"")+ "<br>";
