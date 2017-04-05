@@ -10,12 +10,12 @@ main();
 
 async function main() {
     /*************FACEBOOK NEWs[新聞快遞]爬蟲程式**********/
-    // var DiscourseNews = await GetData(GetDiscourseOptions('facebook', facebooknewstopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicname,topicid)
-    // var timestamp = await Timestamp(DiscourseNews); //最一筆po文時間轉為timestamp
-    // var FacebookOptions = await GetFacebookOptions(timestamp + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
-    // var FacebookNews = await GetData(FacebookOptions); //抓取Facebook粉絲頁最新PO文[新聞快遞]
-    // var AnalyFacebookNews = await AnalysisFacebookNews(FacebookNews) //將抓取到的資料做分析處理
-    // var post = await PostData(AnalyFacebookNews, PostDiscourseOptions, facebooknewstopic) //寫回discourse news -函數設定(data,option,topicid)
+    var DiscourseNews = await GetData(GetDiscourseOptions('facebook', facebooknewstopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicname,topicid)
+    var timestamp = await Timestamp(DiscourseNews); //最一筆po文時間轉為timestamp
+    var FacebookOptions = await GetFacebookOptions(timestamp + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
+    var FacebookNews = await GetData(FacebookOptions); //抓取Facebook粉絲頁最新PO文[新聞快遞]
+    var AnalyFacebookNews = await AnalysisFacebookNews(FacebookNews) //將抓取到的資料做分析處理
+    var post = await PostData(AnalyFacebookNews, PostDiscourseOptions, facebooknewstopic) //寫回discourse news -函數設定(data,option,topicid)
 
     //*************FACEBOOK [新聞觀測]爬蟲程式**********/
     var DiscourseGlobe = await GetData(GetDiscourseOptions('around-the-globe', facebookglobetopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicid)
@@ -23,7 +23,7 @@ async function main() {
     var FacebookOptionsGlobe = await GetFacebookAroundOptions(timestampGlobe + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
     var FacebookGlobe = await GetData(FacebookOptionsGlobe); //抓取Facebook粉絲頁最新PO文[新聞觀測]
     var AnalyFacebookGlobe = await AnalysisFacebookGlobe(FacebookGlobe) //將抓取到的資料做分析處理
-        // var postGlob = await PostData(AnalyFacebookGlobe, PostDiscourseOptions, facebookglobetopic) //寫回discourse news -函數設定(data,option,topicid)  
+    var postGlob = await PostData(AnalyFacebookGlobe, PostDiscourseOptions, facebookglobetopic) //寫回discourse news -函數設定(data,option,topicid)  
 
 }
 
@@ -85,7 +85,7 @@ async function AnalysisFacebookGlobe(jsonfile) {
                 if (jsonfile.data[i].attachments.data[0] != undefined) {
                     if (jsonfile.data[i].attachments.data[0].description != undefined) {
                         var data = jsonfile.data[i].attachments.data[0];
-                        if (data.description.indexOf('【 國際觀測】') > -1) {
+                        if (data.description.indexOf('【國際觀測】') > -1) {
                             fbinfo[counter] = "title:<br>" + data.title + "<br>";
                             table = data.description.substr(data.description.indexOf("類別:")).replace(/\n.*/g, "") + "<br>";
                             data.description = data.description.replace(/類別:.*(\n)+/, "")
@@ -95,14 +95,14 @@ async function AnalysisFacebookGlobe(jsonfile) {
                             data.description = data.description.replace(/年度:.*(\n)+/, "")
                             table += data.description.substr(data.description.indexOf("作者:")).replace(/\n.*/g, "") + "<br>";
                             data.description = data.description.replace(/作者:.*(\n)+/, "");
-                            var table1 = data.description.substr(data.description.indexOf("組織機構和網址：")).replace(/\n.*/g, "").replace(/組織機構和網址：/g, "") + "\n<br>";
+                            var table1 = data.description.substr(data.description.indexOf("組織機構和網址:")).replace(/\n.*/g, "").replace(/組織機構和網址:/g, "") + "\n<br>";
                             table1 = table1.split('http');
-                            table += "組織機構名稱與網址：" + table1[0] + "\n\nhttp" + table1[1];
-                            data.description = data.description.replace(/組織機構和網址：.*(\n)+/, "");
+                            table += "組織機構名稱與網址:" + table1[0] + "\n\nhttp" + table1[1];
+                            data.description = data.description.replace(/組織機構和網址:.*/, "");
                             fbinfo[counter] += "table:<br>" + table;
                             fbinfo[counter] += "發佈日期:" + jsonfile.data[i].created_time.replace(/[+].*/, "") + "<br>";
                             fbinfo[counter] += "content:<br>" + data.description.replace(/【國際觀測】/, "") + "<br>";
-                            console.log(fbinfo[counter])
+                            // console.log(fbinfo[counter])
                             counter++;
                         }
                     }
