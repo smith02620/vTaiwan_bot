@@ -15,9 +15,10 @@ async function main() {
     var FacebookOptions = await GetFacebookOptions(timestamp + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
     var FacebookNews = await GetData(FacebookOptions); //抓取Facebook粉絲頁最新PO文[新聞快遞]
     var AnalyFacebookNews = await AnalysisFacebookNews(FacebookNews) //將抓取到的資料做分析處理
+    
     var post = await PostData(AnalyFacebookNews, PostDiscourseOptions, facebooknewstopic) //寫回discourse news -函數設定(data,option,topicid)
 
-    //*************FACEBOOK [新聞觀測]爬蟲程式**********/
+    // //*************FACEBOOK [新聞觀測]爬蟲程式**********/
     var DiscourseGlobe = await GetData(GetDiscourseOptions('around-the-globe', facebookglobetopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicid)
     var timestampGlobe = await Timestamp(DiscourseGlobe); //最一筆po文時間轉為timestamp
     var FacebookOptionsGlobe = await GetFacebookAroundOptions(timestampGlobe + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
@@ -58,15 +59,16 @@ async function AnalysisFacebookNews(jsonfile) {
     var counter = '';
     var fbinfo = [];
     counter = 0;
+    jsonfile.data = jsonfile.data.reverse()
     for (var i = 0; i < jsonfile.data.length; i++) {
-        if (jsonfile.data[(jsonfile.data.length - i) - 1].message != undefined && jsonfile.data[(jsonfile.data.length - i) - 1].message.indexOf('【新聞快遞】') == 0) {
-            fbinfo[counter] = "新聞名稱:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].name + "<br>";
-            fbinfo[counter] += "新聞內文:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].description + "<br>";
-            fbinfo[counter] += "新聞圖片:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].full_picture + "<br>";
-            fbinfo[counter] += "新聞來源:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].caption + "<br>";
-            fbinfo[counter] += "新聞關鍵字:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].message.replace(/#/, "") + "<br>";
-            fbinfo[counter] += "新聞連結:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].link + "<br>";
-            fbinfo[counter] += "建立時間:<br>" + jsonfile.data[(jsonfile.data.length - i) - 1].created_time + "<br>";
+        if (jsonfile.data[i].message != undefined && jsonfile.data[i].message.indexOf('【新聞快遞】') == 0) {
+            fbinfo[counter] = "新聞名稱:<br>" + jsonfile.data[i].name + "<br>";
+            fbinfo[counter] += "新聞內文:<br>" + jsonfile.data[i].description + "<br>";
+            fbinfo[counter] += "新聞圖片:<br>" + jsonfile.data[i].full_picture + "<br>";
+            fbinfo[counter] += "新聞來源:<br>" + jsonfile.data[i].caption + "<br>";
+            fbinfo[counter] += "新聞關鍵字:<br>" + jsonfile.data[i].message.replace(/#/, "") + "<br>";
+            fbinfo[counter] += "新聞連結:<br>" + jsonfile.data[i].link + "<br>";
+            fbinfo[counter] += "建立時間:<br>" + jsonfile.data[i].created_time + "<br>";
             counter++;
         }
     }
@@ -108,30 +110,6 @@ async function AnalysisFacebookGlobe(jsonfile) {
                     }
                 }
             }
-            // if (jsonfile.data[(jsonfile.data.length - i) - 1].attachments.data[0].description != undefined) {
-            //     console.log(jsonfile.data[(jsonfile.data.length - i) - 1])
-            //     var length = (jsonfile.data.length - i) - 1;
-            //     var data = jsonfile.data[length].attachments.data[0];
-            //     if (data.description.indexOf('【國際觀測】') > -1) {
-            //         fbinfo[counter] = "title:<br>" + data.title + "<br>";
-            //         table = data.description.substr(data.description.indexOf("類別:")).replace(/\n.*/g, "") + "<br>";
-            //         data.description = data.description.replace(/類別:.*(\n)+/, "")
-            //         table += data.description.substr(data.description.indexOf("區域:")).replace(/\n.*/g, "") + "<br>";
-            //         data.description = data.description.replace(/區域:.*(\n)+/, "")
-            //         table += data.description.substr(data.description.indexOf("年度:")).replace(/\n.*/g, "") + "<br>";
-            //         data.description = data.description.replace(/年度:.*(\n)+/, "")
-            //         table += data.description.substr(data.description.indexOf("作者:")).replace(/\n.*/g, "") + "<br>";
-            //         data.description = data.description.replace(/作者:.*(\n)+/, "");
-            //         var table1 = data.description.substr(data.description.indexOf("組織機構和網址：")).replace(/\n.*/g, "").replace(/組織機構和網址：/g, "") + "\n<br>";
-            //         table1 = table1.split('http');
-            //         table += "組織機構名稱與網址：" + table1[0] + "\n\nhttp" + table1[1];
-            //         data.description = data.description.replace(/組織機構和網址：.*(\n)+/, "");
-            //         fbinfo[counter] += "table:<br>" + table;
-            //         fbinfo[counter] += "發佈日期:" + jsonfile.data[length].created_time.replace(/[+].*/, "") + "<br>";
-            //         fbinfo[counter] += "content:<br>" + data.description.replace(/【國際觀測】/, "") + "<br>";
-            //         counter++;
-            //     }
-            // }
         }
     }
     return fbinfo;
@@ -145,7 +123,12 @@ async function PostData(data, option, topicid) {
         for (let i of data) {
             coun++;
             console.log("\r\n***目前上傳第" + coun + "篇***\r\n")
-            var contents = await PostDatatoDiscourse(i, option, topicid);
+            console.log(option)
+            if(i.indexOf(undefined) > -1) {
+                var contents = await PostDatatoDiscourse(i, option, 1359); //如果出現錯誤寫入到錯誤回報1359
+            } else {
+                var contents = await PostDatatoDiscourse(i, option, topicid);
+            }
         }
         console.log("\r\n***上傳完成***\r\n")
     } else {
