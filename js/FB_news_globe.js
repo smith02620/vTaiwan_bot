@@ -3,6 +3,8 @@ var querystring = require('querystring'); //--
 var config = require('./configfacebook');
 var facebooknewstopic = 1249; //設定topic編號
 var facebookglobetopic = 1258; //設定topic編號
+var newserror = 1359;
+var arounderror = 1398;
 
 
 //**************主程式************************ */
@@ -11,16 +13,17 @@ main();
 async function main() {
     /*************FACEBOOK NEWs[新聞快遞]爬蟲程式**********/
     var DiscourseNews = await GetData(GetDiscourseOptions('facebook', facebooknewstopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicname,topicid)
-    var timestamp = await Timestamp(DiscourseNews); //最一筆po文時間轉為timestamp
+    var DiscourseNewsError = await GetData(GetDiscourseOptions('news-error-report', newserror))
+    var timestamp = await Timestamp(DiscourseNews, DiscourseNewsError); //最一筆po文時間轉為timestamp
     var FacebookOptions = await GetFacebookOptions(timestamp + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
     var FacebookNews = await GetData(FacebookOptions); //抓取Facebook粉絲頁最新PO文[新聞快遞]
     var AnalyFacebookNews = await AnalysisFacebookNews(FacebookNews) //將抓取到的資料做分析處理
-    
     var post = await PostData(AnalyFacebookNews, PostDiscourseOptions, facebooknewstopic) //寫回discourse news -函數設定(data,option,topicid)
 
     // //*************FACEBOOK [新聞觀測]爬蟲程式**********/
     var DiscourseGlobe = await GetData(GetDiscourseOptions('around-the-globe', facebookglobetopic)); //抓取DiscourseNews最後一筆資料-函數設定GetDiscourseOptions(topicid)
-    var timestampGlobe = await Timestamp(DiscourseGlobe); //最一筆po文時間轉為timestamp
+    var DiscourseGlobeError = await GetData(GetDiscourseOptions('around-the-globe-error-report', arounderror))
+    var timestampGlobe = await Timestamp(DiscourseGlobe, DiscourseGlobeError); //最一筆po文時間轉為timestamp
     var FacebookOptionsGlobe = await GetFacebookAroundOptions(timestampGlobe + 1); //使用discourse最後一筆時間抓取Facebook粉絲頁PO文設定
     var FacebookGlobe = await GetData(FacebookOptionsGlobe); //抓取Facebook粉絲頁最新PO文[新聞觀測]
     var AnalyFacebookGlobe = await AnalysisFacebookGlobe(FacebookGlobe) //將抓取到的資料做分析處理
@@ -43,16 +46,27 @@ async function GetData(option) {
     })
 }
 //**************日期轉換timestamp************************ */
-async function Timestamp(data) {
-
+async function Timestamp(data, errordata) {
+    var errorlastdata = errordata.post_stream.posts[errordata.post_stream.posts.length - 1].cooked;
     var lastdata = data.post_stream.posts[data.post_stream.posts.length - 1].cooked;
-    if (data.post_stream.posts[0].topic_id == 1249) {
+    var topicid = data.post_stream.posts[0].topic_id
+    if (topicid === 1249 || topicid === 1359) {
         var lasttime = lastdata.replace(/(\W(.*))+建立時間:<br>/, "").replace(/[+].*(\W(.*))+/, "");
-    } else if (data.post_stream.posts[0].topic_id == 1258) {
+        if (errorlastdata.indexOf("建立時間") > -1) {
+            var errorlasttime = errorlastdata.replace(/(\W(.*))+建立時間:<br>/, "").replace(/[+].*(\W(.*))+/, "");
+        } else var errorlasttime = 0;
+    } else if (topicid == 1258 || topicid === 1398) {
         var lasttime = lastdata.indexOf("發佈日期");
         lasttime = lastdata.substr(lasttime, 27).replace(/發佈日期:/g, "").replace(/<.*/, "");
+        var errorlasttime = errorlastdata.indexOf("發佈日期");
+        if(errorlasttime > -1) {
+            errorlasttime = errorlastdata.substr(lasttime, 27).replace(/發佈日期:/g, "").replace(/<.*/, "");
+        } else errorlasttime = 0;
     }
-    return new Date(lasttime).getTime() / 1000;
+    var time = new Date(lasttime).getTime() / 1000;
+    var errortime = new Date(errorlasttime).getTime() / 1000;
+    if (time > errortime) {return time} // 比較時間
+    else {return errortime}
 }
 //*****************抓取facebook [新聞快遞]並且將資料解析*************
 async function AnalysisFacebookNews(jsonfile) {
@@ -62,6 +76,7 @@ async function AnalysisFacebookNews(jsonfile) {
     jsonfile.data = jsonfile.data.reverse()
     for (var i = 0; i < jsonfile.data.length; i++) {
         if (jsonfile.data[i].message != undefined && jsonfile.data[i].message.indexOf('【新聞快遞】') == 0) {
+            if (jsonfile.data[i].description === undefined) {jsonfile.data[i].description = '新聞內文請點連結'}
             fbinfo[counter] = "新聞名稱:<br>" + jsonfile.data[i].name + "<br>";
             fbinfo[counter] += "新聞內文:<br>" + jsonfile.data[i].description + "<br>";
             fbinfo[counter] += "新聞圖片:<br>" + jsonfile.data[i].full_picture + "<br>";
@@ -125,7 +140,11 @@ async function PostData(data, option, topicid) {
             console.log("\r\n***目前上傳第" + coun + "篇***\r\n")
             console.log(option)
             if(i.indexOf(undefined) > -1) {
-                var contents = await PostDatatoDiscourse(i, option, 1359); //如果出現錯誤寫入到錯誤回報1359
+                if (topicid === facebooknewstopic) {
+                    var contents = await PostDatatoDiscourse(i, option, newserror); //如果出現錯誤寫入到錯誤回報1359
+                } else {
+                    var contents = await PostDatatoDiscourse(i, option, arounderror); //如果出現錯誤寫入到錯誤回報arounderror
+                }
             } else {
                 var contents = await PostDatatoDiscourse(i, option, topicid);
             }
